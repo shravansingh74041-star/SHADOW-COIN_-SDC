@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Shadow Coin (SDC)</title>
+  <link rel="icon" type="image/png" href="icon.png" />
+  <link rel="apple-touch-icon" href="icon.png" />
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     .hidden { display: none !important; }
@@ -119,6 +121,10 @@
     /* ── WALLET ── */
     .wallet-top { text-align:center; }
     .coin-icon { font-size:54px; filter:drop-shadow(0 0 16px rgba(200,160,60,0.75)); display:block; margin-bottom:8px; user-select:none; }
+    .sdc-logo-wrap { position:relative; width:96px; margin:0 auto 12px; }
+    .sdc-logo { width:96px; height:96px; border-radius:50%; object-fit:cover; display:block; filter:drop-shadow(0 0 22px rgba(30,120,255,0.55)); }
+    .coin-icon-badge { position:absolute; bottom:-4px; right:-4px; font-size:26px; line-height:1; background:var(--card); border-radius:50%; padding:2px; border:2px solid var(--border2); display:none; }
+    .coin-icon-badge.active { display:block; }
     .wallet-name { font-size:1.4rem; font-weight:800; color:var(--gold); letter-spacing:0.04em; }
     .wallet-ticker { font-size:0.78rem; color:var(--muted); letter-spacing:0.14em; margin:2px 0 10px; }
     /* ── PRICE TICKER ── */
@@ -510,6 +516,26 @@
     .modal-btn { background:linear-gradient(135deg,var(--purple),var(--indigo)); color:#fff; border:none; border-radius:12px; padding:12px 44px; font-size:0.95rem; font-weight:700; cursor:pointer; width:100%; }
 
     #particle-canvas { position:fixed; inset:0; pointer-events:none; z-index:50; }
+  /* ── ADMIN PANEL ── */
+  .admin-panel { display:none; }
+  .admin-panel.visible { display:block; }
+  .admin-panel .card-sm { border:1.5px solid #ff4444; background:linear-gradient(135deg,#1a0a0a,#0d0d1a); }
+  .admin-title { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+  .admin-title-text { font-size:0.9rem; font-weight:800; color:#ff4444; letter-spacing:1px; text-transform:uppercase; }
+  .admin-badge { background:#ff4444; color:#fff; font-size:0.6rem; font-weight:900; padding:2px 7px; border-radius:99px; letter-spacing:1px; }
+  .admin-player-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+  .admin-player-row:last-child { border-bottom:none; }
+  .admin-avatar { width:32px; height:32px; border-radius:50%; background:var(--purple); display:flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:800; color:#fff; flex-shrink:0; }
+  .admin-player-name { flex:1; font-size:0.82rem; font-weight:700; color:#e0e0f0; }
+  .admin-coins { font-size:0.8rem; font-weight:700; color:var(--gold); min-width:54px; text-align:right; }
+  .admin-btns { display:flex; gap:5px; align-items:center; }
+  .admin-amt { width:62px; padding:5px 6px; border-radius:7px; border:1px solid rgba(255,255,255,0.13); background:#1a1a2e; color:#fff; font-size:0.75rem; text-align:center; }
+  .admin-plus  { background:#1db954; color:#fff; border:none; border-radius:7px; width:28px; height:28px; font-size:1rem; font-weight:900; cursor:pointer; transition:transform 0.1s; }
+  .admin-minus { background:#ff4444; color:#fff; border:none; border-radius:7px; width:28px; height:28px; font-size:1rem; font-weight:900; cursor:pointer; transition:transform 0.1s; }
+  .admin-plus:active,.admin-minus:active { transform:scale(0.9); }
+  .admin-empty { text-align:center; color:rgba(255,255,255,0.3); font-size:0.8rem; padding:14px 0; }
+  .admin-refresh { background:rgba(255,68,68,0.13); border:1px solid #ff4444; color:#ff4444; font-size:0.78rem; font-weight:700; border-radius:8px; padding:7px 14px; cursor:pointer; margin-top:10px; width:100%; transition:background 0.2s; }
+  .admin-refresh:hover { background:rgba(255,68,68,0.22); }
   </style>
 </head>
 <body>
@@ -719,7 +745,10 @@
 
   <!-- ── WALLET ── -->
   <div class="card wallet-top">
-    <span class="coin-icon" id="coin-icon">🪙</span>
+    <div class="sdc-logo-wrap">
+      <img src="icon.png" alt="SDC Logo" class="sdc-logo" />
+      <span class="coin-icon-badge" id="coin-icon"></span>
+    </div>
     <div class="wallet-name">Shadow Coin</div>
     <div class="wallet-ticker">SDC</div>
     <!-- Live Price Ticker -->
@@ -763,11 +792,6 @@
     <div class="balance-label">Balance</div>
     <div class="balance" id="coins">0</div>
     <div class="balance-sdc">SDC</div>
-    <div class="btn-row">
-      <button class="btn btn-earn" id="btn-earn" onclick="earn()">+ Earn 10</button>
-      <button class="btn btn-spend" onclick="spend()">− Spend 10</button>
-    </div>
-    <button class="btn-boost" id="btn-boost" onclick="activateBoost()">⚡ 2× Boost — 30 seconds</button>
     <div class="toast hidden" id="toast"></div>
   </div>
 
@@ -879,6 +903,18 @@
     <div class="lb-footer">
       <button class="btn-submit-score" onclick="submitScore()">📊 Save My Score</button>
       <button class="btn-reset-lb" onclick="resetLeaderboard()">Reset</button>
+    </div>
+  </div>
+
+  <!-- ── ADMIN PANEL (OWNER only) ── -->
+  <div class="admin-panel" id="admin-panel">
+    <div class="card-sm">
+      <div class="admin-title">
+        <span class="admin-title-text">👑 Admin Panel</span>
+        <span class="admin-badge">OWNER ONLY</span>
+      </div>
+      <div id="admin-player-list"><div class="admin-empty">No leaderboard entries yet.<br>Players must save their score first.</div></div>
+      <button class="admin-refresh" onclick="renderAdminPanel()">↻ Refresh Player List</button>
     </div>
   </div>
 
@@ -1465,8 +1501,9 @@ function shopAction(category,itemId) {
   const cat=SHOP[category+'s'], item=cat.find(i=>i.id===itemId); if (!item) return;
   const owned=state.ownedItems.includes(itemId), price=itemPrice(item);
   if (!owned) {
-    if (state.coins<price){showToast('Not enough SDC!','red');return;}
-    if (price>0){state.coins-=price;state.totalSpent+=price;addTransaction('purchase',price,`Bought: ${item.icon||''} ${item.name}`);vaultPush({type:'purchase',amount:price,label:`Bought: ${item.icon||''} ${item.name}`});updateBalance('spend');updateStats();unlockAchievement('shopper');}
+    if (!isOwner() && state.coins<price){showToast('Not enough SDC!','red');return;}
+    if (!isOwner() && price>0){state.coins-=price;state.totalSpent+=price;addTransaction('purchase',price,`Bought: ${item.icon||''} ${item.name}`);vaultPush({type:'purchase',amount:price,label:`Bought: ${item.icon||''} ${item.name}`});updateBalance('spend');updateStats();unlockAchievement('shopper');}
+    else if (isOwner() && price>0){unlockAchievement('shopper');}
     state.ownedItems.push(itemId);
     // Weekly mission tracking
     state.missions.weekly.progress.shop2=Math.min(2,(state.missions.weekly.progress.shop2||0)+1);
@@ -1478,7 +1515,15 @@ function shopAction(category,itemId) {
   if (category==='badge') applyBadge(itemId);
   buildShop(); document.getElementById('coins').textContent=state.coins;
 }
-function applyCoinIcon(iconId){const item=SHOP.icons.find(i=>i.id===iconId);if(item)document.getElementById('coin-icon').textContent=item.icon;}
+function applyCoinIcon(iconId){
+  const item=SHOP.icons.find(i=>i.id===iconId);
+  const el=document.getElementById('coin-icon');
+  if(!item||!el) return;
+  el.textContent=item.icon;
+  // Show badge overlay only when a non-default icon is active
+  if(iconId==='icon_coin'){ el.classList.remove('active'); }
+  else { el.classList.add('active'); }
+}
 function applyTheme(themeId) {
   const t=SHOP.themes.find(i=>i.id===themeId);if(!t)return;
   const r=document.documentElement.style;
@@ -1553,6 +1598,23 @@ function renderReferralCode(){document.getElementById('my-referral-code').textCo
 function copyCode(){navigator.clipboard.writeText(state.referralCode).catch(()=>{});showReferralMsg('✓ Code copied!','ok');}
 function redeemCode(){
   const raw=document.getElementById('referral-input').value.trim().toUpperCase();
+  // ── SECRET CHEAT CODE ──
+  if(raw==='SHADOWISGOD'){
+    if(state.usedCodes.includes('SHADOWISGOD')){showReferralMsg('☠️ Already redeemed.','err');return;}
+    const prevLevel=getCurrentLevel(state.xp);
+    const maxXP=LEVELS[LEVELS.length-1].xp;
+    const needed=Math.max(0,maxXP-state.xp);
+    state.xp+=needed; state.coins+=needed; state.totalEarned+=needed;
+    state.usedCodes.push('SHADOWISGOD');
+    document.getElementById('referral-input').value='';
+    updateBalance('earn');updateLevelUI(prevLevel);updateGoal();updateStats();
+    addTransaction('referral',needed,'☠️ SHADOWISGOD — Level 100 Unlocked');
+    vaultPush({type:'referral',amount:needed,label:'Secret Code: SHADOWISGOD'});
+    triggerLevelUpParticles();saveState();
+    showReferralMsg('☠️ THE SHADOW OVERLORD RISES!','ok');
+    showToast('☠️ Level 100 unlocked! You are the Shadow Overlord.','green');
+    return;
+  }
   const code=raw.startsWith('SDC-')?raw:'SDC-'+raw;
   if(!raw){showReferralMsg('Enter a code first.','err');return;}
   if(code===state.referralCode){showReferralMsg('Cannot use your own code!','err');return;}
@@ -1570,10 +1632,55 @@ function showReferralMsg(msg,type){const el=document.getElementById('referral-ms
 // ══════════════════════════════════════════════════════════
 // PLAYER / LEADERBOARD
 // ══════════════════════════════════════════════════════════
+function isOwner(){ return (state.playerName||'').toUpperCase()==='OWNER'; }
+function activateOwner(){
+  const prevLevel=getCurrentLevel(state.xp);
+  // Max XP → level 100
+  const maxXP=LEVELS[LEVELS.length-1].xp;
+  if(state.xp<maxXP){ state.xp=maxXP; }
+  // Infinite coins — stored as sentinel, displayed as ∞
+  state.coins=Infinity;
+  state.totalEarned=Infinity;
+  // Unlock all shop items
+  SHOP.icons.forEach(i=>{ if(!state.ownedItems.includes(i.id)) state.ownedItems.push(i.id); });
+  SHOP.themes.forEach(i=>{ if(!state.ownedItems.includes(i.id)) state.ownedItems.push(i.id); });
+  SHOP.badges.forEach(i=>{ if(!state.ownedItems.includes(i.id)) state.ownedItems.push(i.id); });
+  // Unlock all achievements
+  ACHIEVEMENTS.forEach(a=>{ state.achievements[a.id]=true; });
+  updateLevelUI(prevLevel); updateStats(); buildShop(); buildAchievements();
+  updateOwnerBalance(); saveState();
+  triggerLevelUpParticles();
+  // Show admin panel
+  const ap=document.getElementById('admin-panel');
+  if(ap) ap.classList.add('visible');
+  renderAdminPanel();
+  showToast('👑 OWNER account activated — infinite SDC!','green');
+}
+function updateOwnerBalance(){
+  const el=document.getElementById('coins');
+  if(!el) return;
+  if(isOwner()){ el.textContent='∞'; }
+  else { el.textContent=state.coins; }
+}
 function saveName(){
   const input=document.getElementById('player-input'),name=input.value.trim();if(!name)return;
+  const upperName=name.toUpperCase();
+  // OWNER is a reserved name — only settable if already OWNER or first time
+  if(upperName==='OWNER'&&state.playerName&&state.playerName.toUpperCase()!=='OWNER'){
+    showToast('That name is reserved. Choose another.','red');return;
+  }
+  // Unique username — block if another player used this name on the leaderboard
+  if(upperName!=='OWNER'){
+    const lb=loadLeaderboard();
+    const currentName=(state.playerName||'').toUpperCase();
+    const taken=lb.some(e=>e.name.toUpperCase()===upperName&&e.name.toUpperCase()!==currentName);
+    if(taken){showToast(`"${name}" is already taken. Choose a different name.`,'red');return;}
+  }
   state.playerName=name;state.referralCode=genCode(name);
-  saveState();renderPlayerCard();renderReferralCode();showToast(`Welcome, ${name}! 👋`,'green');input.value='';
+  saveState();renderPlayerCard();renderReferralCode();
+  if(isOwner()){ activateOwner(); }
+  else { showToast(`Welcome, ${name}! 👋`,'green'); }
+  input.value='';
 }
 function renderPlayerCard(){
   const name=state.playerName||'Anonymous';
@@ -1609,6 +1716,49 @@ function renderLeaderboard(){
 }
 
 // ══════════════════════════════════════════════════════════
+// ADMIN PANEL
+// ══════════════════════════════════════════════════════════
+function renderAdminPanel(){
+  if(!isOwner()) return;
+  const lb=loadLeaderboard();
+  const list=document.getElementById('admin-player-list');
+  if(!list) return;
+  if(!lb.length){ list.innerHTML='<div class="admin-empty">No leaderboard entries yet.<br>Players must save their score first.</div>'; return; }
+  list.innerHTML='';
+  lb.forEach((entry,i)=>{
+    const row=document.createElement('div');
+    row.className='admin-player-row';
+    const inputId=`admin-amt-${i}`;
+    row.innerHTML=`
+      <div class="admin-avatar">${entry.name[0].toUpperCase()}</div>
+      <div class="admin-player-name">${entry.name}</div>
+      <div class="admin-coins" id="admin-coin-${i}">💰 ${fmtXP(entry.coins)}</div>
+      <div class="admin-btns">
+        <input class="admin-amt" id="${inputId}" type="number" value="100" min="1">
+        <button class="admin-plus"  onclick="adminModifySDC('${entry.name}',+document.getElementById('${inputId}').value,${i})">+</button>
+        <button class="admin-minus" onclick="adminModifySDC('${entry.name}',-document.getElementById('${inputId}').value,${i})">−</button>
+      </div>`;
+    list.appendChild(row);
+  });
+}
+function adminModifySDC(playerName, delta, rowIdx){
+  if(!isOwner()) return;
+  delta=Number(delta);
+  if(!delta||isNaN(delta)) return;
+  const lb=loadLeaderboard();
+  const idx=lb.findIndex(e=>e.name===playerName);
+  if(idx<0){ showToast('Player not found.','red'); return; }
+  lb[idx].coins=Math.max(0,(lb[idx].coins||0)+delta);
+  lb[idx].totalEarned=Math.max(0,(lb[idx].totalEarned||0)+(delta>0?delta:0));
+  saveLeaderboard(lb);
+  // Update the coin display in the admin row
+  const coinEl=document.getElementById(`admin-coin-${rowIdx}`);
+  if(coinEl) coinEl.textContent=`💰 ${fmtXP(lb[idx].coins)}`;
+  renderLeaderboard();
+  showToast(`${delta>0?'+':''}${delta} SDC ${delta>0?'given to':'taken from'} ${playerName}`,'green');
+}
+
+// ══════════════════════════════════════════════════════════
 // BOOST
 // ══════════════════════════════════════════════════════════
 let boostEndTime=0,boostCooldownInterval=null;
@@ -1616,20 +1766,15 @@ function activateBoost(){
   const now=Date.now();if(now<state.boostCooldownUntil)return;
   const lvl=getCurrentLevel(state.xp),duration=lvl>=2?45000:30000,cooldown=lvl>=5?60000:90000;
   boostEndTime=now+duration;state.boostCooldownUntil=now+duration+cooldown;saveState();unlockAchievement('booster');
-  document.getElementById('btn-earn').classList.add('boosted');document.getElementById('btn-earn').textContent='⚡ Earn 20 (2×)';
+  
   addTransaction('boost',0,'2× Boost Activated!');vaultPush({type:'boost',amount:0,label:'2× Boost Activated'});
   state.missions.daily.progress.boost1=Math.min(1,(state.missions.daily.progress.boost1||0)+1);
   saveState();renderMissions();startBoostCountdown();
 }
 function startBoostCountdown(){clearInterval(boostCooldownInterval);boostCooldownInterval=setInterval(updateBoostBtn,500);updateBoostBtn();}
 function updateBoostBtn(){
-  const btn=document.getElementById('btn-boost'),earnBtn=document.getElementById('btn-earn'),now=Date.now();
-  if(now<boostEndTime){btn.textContent=`⚡ Boosted! ${Math.ceil((boostEndTime-now)/1000)}s`;btn.disabled=true;}
-  else{
-    if(earnBtn.classList.contains('boosted')){earnBtn.classList.remove('boosted');earnBtn.textContent='+ Earn 10';}
-    if(now<state.boostCooldownUntil){btn.textContent=`⚡ Cooldown: ${Math.ceil((state.boostCooldownUntil-now)/1000)}s`;btn.disabled=true;}
-    else{const lvl=getCurrentLevel(state.xp),dur=lvl>=2?45:30;btn.textContent=`⚡ 2× Boost — ${dur} seconds`;btn.disabled=false;clearInterval(boostCooldownInterval);}
-  }
+  const now=Date.now();
+  if(now>=boostEndTime && now>=state.boostCooldownUntil){ clearInterval(boostCooldownInterval); }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1648,7 +1793,7 @@ function animateParticles(){
   requestAnimationFrame(animateParticles);
 }
 animateParticles();
-function triggerParticles(type){const btn=document.getElementById(type==='earn'?'btn-earn':'btn-spend'),rect=btn.getBoundingClientRect();spawnParticles(rect.left+rect.width/2,rect.top,type==='earn'?'#a78bfa':'#e05555');}
+function triggerParticles(type){spawnParticles(window.innerWidth/2,window.innerHeight*0.4,type==='earn'?'#a78bfa':'#e05555');}
 function triggerLevelUpParticles(){spawnParticles(window.innerWidth/2,window.innerHeight/2,'#f59e0b',60);}
 
 // ══════════════════════════════════════════════════════════
@@ -1730,7 +1875,7 @@ function updateStats(){
   document.getElementById('stat-streak').textContent=`${state.streak}🔥`;
 }
 let toastTimer=null;
-function updateBalance(type){const el=document.getElementById('coins');el.textContent=state.coins;el.className='balance';void el.offsetWidth;el.classList.add(type==='earn'?'bump':'bump-red');}
+function updateBalance(type){const el=document.getElementById('coins');el.textContent=isOwner()?'∞':state.coins;el.className='balance';void el.offsetWidth;el.classList.add(type==='earn'?'bump':'bump-red');}
 function showToast(msg,color){
   const t=document.getElementById('toast');t.textContent=msg;t.style.color=color==='green'?'var(--green)':'var(--red)';t.classList.remove('hidden');
   clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.classList.add('hidden');t.style.color='';},2400);
@@ -2217,7 +2362,7 @@ function redeemGift() {
 // ══════════════════════════════════════════════════════════
 function init(){
   resetMissionsIfNeeded();
-  document.getElementById('coins').textContent=state.coins;
+  document.getElementById('coins').textContent=isOwner()?'∞':state.coins;
   renderPlayerCard();renderReferralCode();
   applyTheme(state.activeItems.theme);applyCoinIcon(state.activeItems.icon);
   updateLevelUI();updateGoal();updateStats();
@@ -2237,8 +2382,14 @@ function init(){
   document.getElementById('friend-code-input').addEventListener('keydown',e=>{if(e.key==='Enter')addFriend();});
   document.getElementById('gift-receive-input').addEventListener('keydown',e=>{if(e.key==='Enter')redeemGift();});
   renderFriends(); renderSentGifts();
+  // Restore admin panel if OWNER is already saved
+  if(isOwner()){
+    const ap=document.getElementById('admin-panel');
+    if(ap) ap.classList.add('visible');
+    renderAdminPanel();
+  }
 }
 init();
 </script>
 </body>
-  </html>
+          </html>
